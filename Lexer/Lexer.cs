@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using WindowAPI.winsock2.h.Structures;
 
 namespace Lexer
 {
@@ -12,16 +13,24 @@ namespace Lexer
     {
         public static void Run(string code)
         {
-            var tokens = code.Split(' ');
-            switch (tokens[0])
+            var codes = code.Replace("\r",null).Trim().Split('\n');
+            for (int i = 0; i < codes.Length; i++)
             {
-                case ".method":
-                    MethodHandler.Run(code);
-                    break;
-                default:
-                    ErrorHandler.Send(code,"invaild Instruction");
-                break;
+
+                var tokens = codes[i].Split(' ');
+                var ISType = StringHelper.AllTypes.Contains(tokens[0].Replace(" ", null).TrimEnd());
+                if(tokens[0]==".method")
+                    MethodHandler.Run(codes[i]);
+                else
+                {
+                    if (ISType)
+                        ValueHandler.Run(codes[i]);
+                    else
+                        ErrorHandler.Send(codes[i], "invaild Instruction");
+                }  
+                
             }
+            Console.ReadLine();
         }
       
  
@@ -37,13 +46,17 @@ namespace Lexer
             }
             Console.WriteLine(id);
         }
+        public static void Pi()
+        {
+            Console.WriteLine("LOL");
+        }
         public void Add(int value1,int value2) {
             Print(value2 + value1);
          }
         //watch this
         public void Print(object text)
         {
-            Console.Write(0);
+            Console.Write(text);
         }
         public static void Read(string me)
         {

@@ -13,11 +13,11 @@ public class Convertor
                 return ints.ToArray(); // k
             default:
                 ErrorHandler.Send("Arrays", ".....");
-                Environment.Exit(0);
+                //Environment.Exit(0);
                 return 0;
         }
     }
-    public static dynamic GetType(string type, string value)
+    public static dynamic GetType(string type, dynamic value)
     {
         switch (type.ToLower())
         {

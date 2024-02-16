@@ -11,6 +11,6 @@ public class ErrorHandler
         Console.ForegroundColor = ConsoleColor.Red;
         Console.WriteLine(error + $" {reason}");
         Console.ResetColor();
-        Environment.Exit( 0 );
+       // Environment.Exit( 0 );
     }
 }
