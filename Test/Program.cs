@@ -2,6 +2,5 @@
 
 
 Lexer.Lexer.Run(@"
-string MyName -> ememrkke
-int32 Nigger -> 384
-.method call Print(int32<-Nigger)");
+int32 value1->203
+.method call Add(int32 <- value1,int32->232)");

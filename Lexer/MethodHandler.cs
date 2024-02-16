@@ -30,7 +30,7 @@ namespace Lexer
         }
         private static void CallMethod(string code)
         {
-            Regex regex = new Regex($@"\s{{0,}}call\s{{1,}}(\D{{1,}}\w{{0,}})[(](({StringHelper.AllTypes})(->|<-)[\w\d]{{1,}})*[)]");
+            Regex regex = new Regex($@"\s{{0,}}call\s{{1,}}(\D{{1,}}\w{{0,}})[(].{{0,}}");
             Match match = regex.Match(code);
             if (match.Success)
             {

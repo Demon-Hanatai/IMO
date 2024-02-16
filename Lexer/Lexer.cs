@@ -30,7 +30,7 @@ namespace Lexer
                 }  
                 
             }
-            Console.ReadLine();
+          
         }
       
  

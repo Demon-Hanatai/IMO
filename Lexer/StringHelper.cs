@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace Lexer
 {
@@ -11,25 +9,33 @@ namespace Lexer
     {
         [DllImport("Ole32.dll")]
         public static extern IntPtr CoTaskMemAlloc(int size);
-        public static string AllTypes = "string|int32|int64|uint32|uint64|double|bool|byte|char|datetime|decimal|float|sbyte|short|ushort";
-        public static IntPtr AllocString(string Value)
-        {
-            IntPtr Address = CoTaskMemAlloc(Value.Length);
-            for (int i = 0; i < Value.Length; i++)
-                *(char*)(Address + i) = Value[i];
-            return Address;
 
+        [DllImport("Ole32.dll")]
+        public static extern void CoTaskMemFree(IntPtr ptr);
+
+        public static string AllTypes = "string|int32|int64|uint32|uint64|double|bool|byte|char|datetime|decimal|float|sbyte|short|ushort";
+
+        public static IntPtr AllocString(string value)
+        {
+            int size = value.Length * sizeof(char);
+            IntPtr address = CoTaskMemAlloc(size);
+            if (address == IntPtr.Zero) throw new OutOfMemoryException("Unable to allocate memory.");
+
+            for (int i = 0; i < value.Length; i++)
+                *((char*)address + i) = value[i];
+
+            return address;
         }
 
-        public static string GetString(long Address)
+        public static string GetString(long address)
         {
             List<byte> bytes = new List<byte>();
-            while (*(byte*)Address != 0)
+            while (*(byte*)address != 0)
             {
-                bytes.Add(*(byte*)Address);
-                Address++;
+                bytes.Add(*(byte*)address);
+                address++;
             }
-            return Encoding.UTF8.GetString(bytes.ToArray());
+            return Encoding.Unicode.GetString(bytes.ToArray()); // Assuming UTF-16 encoding
         }
     }
 }
