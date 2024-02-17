@@ -29,7 +29,7 @@ namespace Lexer
                 }  
                 
             }
-            Console.ReadLine();
+          
         }
       
  
