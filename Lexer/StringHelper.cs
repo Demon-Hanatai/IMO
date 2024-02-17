@@ -11,7 +11,8 @@ namespace Lexer
     {
         [DllImport("Ole32.dll")]
         public static extern IntPtr CoTaskMemAlloc(int size);
-        public static string AllTypes = "string|int32|int64|uint32|uint64|double|bool|byte|char|datetime|decimal|float|sbyte|short|ushort";
+        public static string AllTypes = "string|int32|int64|uint32|uint64|double|bool|byte|char|datetime|decimal|float|sbyte|short|ushort|object";
+        public static string AllOperations = "-|\\|*|%";
         public static IntPtr AllocString(string Value)
         {
             IntPtr Address = CoTaskMemAlloc(Value.Length);

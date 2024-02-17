@@ -1,7 +1,9 @@
 ﻿using Lexer;
 
 
+
 Lexer.Lexer.Run(@"
-string MyName -> ememrkke
-int32 Nigger -> 384
-.method call Print(int32<-Nigger)");
+string MyName -> Demon 404
+double L -> 384.88
+.method call Print(double<-L)");
+Lexer.OperatorHandler.Run("L<-MyName");

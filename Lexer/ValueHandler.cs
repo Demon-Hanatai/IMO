@@ -79,7 +79,7 @@ namespace Lexer
                     }
 
                     else
-                        return Convertor.GetType(match.Groups[1].Value.Replace(" ", null).Trim().TrimEnd(), (string)MemoryHandler.Memorys[match.Groups[2].Value.Replace(" ", null).Trim().TrimEnd()]);
+                        return Convertor.GetType(match.Groups[1].Value.Replace(" ", null).Trim().TrimEnd(), MemoryHandler.Memorys[match.Groups[2].Value.Replace(" ", null).Trim().TrimEnd()]);
                 }
                 else
                     ErrorHandler.Send(message: "Undefined Identifier Error", reason: $"The identifier '{match.Groups[2].Value}' has not been declared or initialized. Please ensure that '{match.Groups[2].Value}' is declared before it is used.");

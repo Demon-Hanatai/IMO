@@ -19,7 +19,7 @@ public class Convertor
     }
     public static dynamic GetType(string type, dynamic value)
     {
-        switch (type.ToLower())
+        switch (Convert.ToString(type).ToLower())
         {
             case "string":
                 return value; // No conversion needed
