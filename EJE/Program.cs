@@ -10,7 +10,8 @@ namespace test43
     {
         static int Main(string[] args)
         {
-            args = new string[] { @"C:\Users\DEMON404\Desktop\Main.sc" };
+            Console.WriteLine();
+            args = new string[] { @"C:\Users\DEMON404\respo\Program\Main.cs" };
             if(args.Length < 1)
             {
                 Console.WriteLine("Usage: Lexer.exe <file path>");
@@ -26,7 +27,7 @@ namespace test43
                if(File.Exists(filePath))
                 {
                     string file = File.ReadAllText(filePath);
-                    Lexer.Lexer.Run(file);
+                    Lexer.Lexer.Run(file,Path.GetDirectoryName(filePath));
                 }
                else
                {
@@ -34,6 +35,7 @@ namespace test43
                     Console.WriteLine("File not found");
                }
             }
+            Console.ReadLine();
             return 0;
         }
      

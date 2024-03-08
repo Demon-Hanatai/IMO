@@ -1,10 +1,17 @@
-﻿using System.Text;
+﻿using System.Reflection;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace Lexer
 {
     public static class Lexer
     {
+        private static bool StartupCreated = false;
+        private static bool LoadIncludes = false;
+        private static bool LoadIncludes2 = false;
+        private static bool IsPreprocessed = false;
+        private static bool LibraryLoaded = false;
+        private static bool DuplicateIncludes = false;
         public static uint CurrentLine = 0;
         private static void StartUp()
         {
@@ -14,7 +21,63 @@ namespace Lexer
            
 
         }
-        private static string LoadMethods(string code)
+        private static string LoadInclude(string code,string defaultFolderPath)
+        {
+            string newcode = "";
+
+            Regex regex = new(@"\.include\s+(.*)\s+from\s+(.*)");
+            MatchCollection match = regex.Matches(code);
+            List<string> functions = new();
+            if (match.Count > 0)
+            {
+                for (int i = 0; i < match.Count; i++)
+                {
+                    var MethodName = match[0].Groups[1].Value;
+                    var From = match[0].Groups[2].Value.TrimEnd();
+                    if (!From.EndsWith(".cs"))
+                    {
+                        From += ".cs";
+                    }
+
+                    string fullPath = Path.IsPathRooted(From) ? From : Path.Combine(defaultFolderPath, From);
+
+                    if (File.Exists(fullPath))
+                    {
+
+                        Regex FindFunction = new($@"\.method\s+create\s+{MethodName}\s*\(\)\s*{{(\s*.*\s*)*}}");
+                        MatchCollection matches = FindFunction.Matches(File.ReadAllText(fullPath));
+                        if (matches.Count > 0)
+                        {
+                            if (!functions.Contains(matches[0].Value))
+                            {
+                                functions.Add(matches[0].Value);
+                            }
+                        }
+                        else
+                        {
+                            ErrorHandler.Send(message: "Function Not Found", reason: $"The function {MethodName} was not found in {fullPath}.");
+                        }
+                    }
+                    else
+                    {
+                        ErrorHandler.Send(message: "File Not Found", reason: $"The file {From} was not found.");
+                    }
+                }
+                foreach (var item in functions)
+                {
+                    newcode += item + "\n";
+                }
+            }
+          
+            foreach (Match item in match)
+            {
+                code = code.Replace(item.Value.TrimEnd(), null);
+            }
+            newcode += code;
+            return newcode;
+            
+        }
+        private static string LoadMethods(string code, string defaultFolderPath)
         {
             Regex regex = new(@"\.method\s+call\s+(\w+\d*)\s+from\s+(.+)");
             MatchCollection match = regex.Matches(code);
@@ -23,40 +86,79 @@ namespace Lexer
             {
                 var MethodName = match[0].Groups[1].Value;
                 var From = match[0].Groups[2].Value;
-                if(File.Exists("./"+From))
+
+                // Append '.cs' if it's not present in the file path
+                if (!From.EndsWith(".cs"))
                 {
-                    Regex FindFunction = new($@"\s*\.method\s+create\s+{MethodName}\s+{{\s+[\s\S]*?\s+}}");
-                    MatchCollection matches = FindFunction.Matches(File.ReadAllText(From));
+                    From += ".cs";
+                }
+
+                string fullPath = Path.IsPathRooted(From) ? From : Path.Combine(defaultFolderPath, From);
+
+                if (File.Exists(fullPath))
+                {
+                    Regex FindFunction = new($@"\.method\s+create\s+{MethodName}\s*\(\)\s*{{(\s*.*\s*)*}}");
+                    MatchCollection matches = FindFunction.Matches(File.ReadAllText(fullPath));
                     if (matches.Count > 0)
                     {
-                        if (!functions.Contains(matches[0].Value))
+                        if (!functions.Contains(matches[0].Value)&&!code.Contains(matches[0].Value))
                         {
                             functions.Add(matches[0].Value);
                         }
-                    
                     }
                     else
                     {
-                        ErrorHandler.Send(message: "Function Not Found", reason: $"The function {MethodName} was not found in {From}.");
+                        ErrorHandler.Send(message: "Function Not Found", reason: $"The function {MethodName} was not found in {fullPath}.");
                     }
                 }
                 else
                 {
-                    ErrorHandler.Send(message: "File Not Found", reason: $"The file {From} was not found.");
+                    ErrorHandler.Send(message: "File Not Found", reason: $"The file {fullPath} was not found.");
                 }
             }
-            Regex findfrom = new(@"\s+from\s+.*");
-            foreach (MatchCollection item in findfrom.Matches(code))
+
+            Regex findFrom = new(@"call\s+(\w+\d*)\s+from\s+(.*)");
+            var matchesFrom = findFrom.Matches(code);
+            for (int i = 0; i < matchesFrom.Count; i++)
             {
-                code = code.Replace(item[0].Value,null);
+                code = code.Replace(matchesFrom[i].Value, $"call::local {matchesFrom[i].Groups[1]}");
             }
-            string newcode = default;
-            foreach (string item in functions)
+
+            string newCode = String.Join("\n", functions) + "\n" + code;
+            return newCode;
+        }
+        private static string IncludeLoader2(string code, string defaultFolderPath)
+        {
+            Regex includeRegex = new(@"\.include\s+(.+)\s*");
+            MatchCollection includeMatches = includeRegex.Matches(code);
+            HashSet<string> includedFiles = new HashSet<string>();
+            StringBuilder newCode = new StringBuilder();
+
+            // Process each include statement
+            foreach (Match m in includeMatches)
             {
-                newcode += item+";";
+                var From = m.Groups[1].Value.TrimEnd();
+                if (!From.EndsWith(".cs")) From += ".cs";
+
+                string fullPath = Path.IsPathRooted(From) ? From : Path.Combine(defaultFolderPath, From);
+
+                if (File.Exists(fullPath) && !includedFiles.Contains(fullPath))
+                {
+                    includedFiles.Add(fullPath);
+                    string fileContent = File.ReadAllText(fullPath);
+                    newCode.AppendLine(fileContent);
+                }
+                else if (!File.Exists(fullPath))
+                {
+                    ErrorHandler.Send(message: "File Not Found", reason: $"The file {fullPath} was not found.");
+                }
             }
-            newcode+="\n"+code;
-            return newcode;
+
+            // Remove the include directives from the code
+            code = includeRegex.Replace(code, "");
+
+            newCode.Append(code);
+            return newCode.ToString();
         }
         private static string PreprocessCode(string code)
         {
@@ -85,12 +187,76 @@ namespace Lexer
 
             return processedLines.ToString();
         }
-
-        public static void Run(string code)
+        private static string RemoveDuplicateIncludes(string code)
         {
-            StartUp();
-            code = PreprocessCode(LoadMethods(code));
-            
+            Regex includeRegex = new(@"\.include\s+(.+?)\s*$", RegexOptions.Multiline);
+            MatchCollection includeMatches = includeRegex.Matches(code);
+
+            HashSet<string> includedFiles = new HashSet<string>();
+            StringBuilder newCode = new StringBuilder();
+
+            foreach (Match match in includeMatches)
+            {
+                string includePath = match.Groups[1].Value.Trim();
+
+                if (!includedFiles.Contains(includePath))
+                {
+                    includedFiles.Add(includePath);
+                }
+                else
+                {
+                    // Replace duplicate include with an empty string
+                    code = code.Replace(match.Value, "");
+                }
+            }
+
+            return code;
+        }
+
+        public static void Run(string code,string Path = "")
+        {
+
+            //Comment Remover
+            Regex regex = new(@"\/\/(.*)");
+            MatchCollection matchs = regex.Matches(code);
+            for (int i = 0; i < matchs.Count; i++)
+            {
+                code = code.Replace(matchs[i].Value, null);
+            }
+            //End Comment Remover\
+            //Remove Duplicate Includes
+            //if (!DuplicateIncludes)
+            //{
+            //    code = RemoveDuplicateIncludes(code);
+            //    DuplicateIncludes = true;
+            //}
+            //End Remove Duplicate Includes
+            if (!StartupCreated)
+            {
+                StartUp();
+                StartupCreated = true;
+            }
+            //if(!IsPreprocessed)
+            //{
+            //    code = PreprocessCode(code);
+            //    IsPreprocessed = true;
+            //}
+            if (!LoadIncludes)
+            {
+                code = LoadInclude(code, Path);
+                LoadIncludes = true;
+            }
+            if (!LoadIncludes2)
+            {
+                code = IncludeLoader2(code, Path);
+                LoadIncludes2 = true;
+            }
+
+            if (!LibraryLoaded)
+            {
+                code = LoadMethods(code, Path);
+                LibraryLoaded = true;
+            }
             string pattern = @"(\.method\s+create[^\{]*\{[\s\S]*?[.\n\r\s]*\})";
             MatchCollection matches = Regex.Matches(code, pattern);
 
@@ -105,7 +271,7 @@ namespace Lexer
             string removeemtryspaces = "";
             string[] _ = code.TrimEnd().TrimStart().Split('\n');
 
-
+       
             foreach (string c in code.TrimEnd().TrimStart().Split('\n'))
             {
                 removeemtryspaces += c.Length >= 1 ? c + "\n" : string.Empty;
@@ -123,19 +289,22 @@ namespace Lexer
             string[] codes = codeslines.ToArray();
 
 
-
+            for (int i = 0; i < codes.Length; i++)
+            {
+                codes[i] = codes[i].TrimStart().TrimEnd();
+            }
 
             for (int i = 0; i < codes.Length; i++)
             {
 
                 CurrentLine = (uint)i;
-                string[] tokens = codes[i].Split(' ');
-                bool ISType = StringHelper.AllTypes.Contains(tokens[0].Replace(" ", null).TrimEnd());
-                if (tokens[0][0] == '/' && tokens[0][1] == '/')
+                if (codes[i] == "")
                 {
                     continue;
                 }
-
+                string[] tokens = codes[i].Split(' ');
+                bool ISType = StringHelper.AllTypes.Contains(tokens[0].Replace(" ", null).TrimEnd());
+                
                 if (tokens[0] == ".method")
                 {
                     MethodHandler.Run(codes[i]);

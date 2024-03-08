@@ -162,8 +162,13 @@ namespace Lexer
                     if (match.Groups[1].Value == "string")
                     {
                         dynamic m = MemoryHandler.Memorys.First(x => x.Key == match.Groups[2].Value.Replace(" ", null).Trim().TrimEnd()).Value;
-                        string text = StringHelper.GetString(((IntPtr)m).ToInt64());
-                        return text;
+                        try
+                        {
+                            string text = StringHelper.GetString(((IntPtr)m).ToInt64());
+                            return text;
+
+                        }
+                        catch { return m; }
                     }
                     else if (match.Groups[1].Value.Contains("*"))
                     {

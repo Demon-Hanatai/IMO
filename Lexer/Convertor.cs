@@ -68,6 +68,14 @@ public class Convertor
 
         try
         {
+            try
+            {
+                if(value is IntPtr str)
+                {
+                    value = StringHelper.GetString(str);
+                }
+            }
+            catch { }
             switch (Convert.ToString(type).ToLower())
             {
                 case "object":

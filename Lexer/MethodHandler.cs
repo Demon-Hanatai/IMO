@@ -119,91 +119,109 @@ namespace Lexer
                                 }
                                 return true;
                             }));
-                    List<dynamic> SendPerms = new(Perms.Count + 1);
-
-
-                    if (Perms.Count > 0)
+                    if (TheMethod == null)
                     {
-
-
-                        dynamic value = "";
-                        for (int i = 0; i < Perms.Count; i++)
+                        TheMethod = helper.GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance)
+      .FirstOrDefault(x => x.Name == methodName && x.GetParameters().Length == Perms.Count &&
+          x.GetParameters().Select((param, index) => param.ParameterType.FullName.ToLower().Contains(Perms[index].Groups[2].Value.ToLower()))
+          .All(match => match));
+                    }
+                        if (TheMethod == null)
                         {
-                            if (Perms[i].Groups[1].Value != "Array::")
-                            {
-                                ValueType_Get_Set(i);
-                            }
-                            void ValueType_Get_Set(int where)
-                            {
+                            ErrorHandler.Send(code, "Unable to Find Method");
+                        }
+                        List<dynamic> SendPerms = new(Perms.Count + 1);
 
-                                value = Perms[where].Groups[3].Value == "<-"
-                                    ? ValueHandler.Run($"{Perms[where].Groups[2].Value} {Perms[where].Groups[3].Value} {Perms[where].Groups[4].Value}")
-                                    : Perms[where].Groups[4].Value;
-                            }
-                            if (Perms[i].Groups[1].Value == "Array::")
-                            {
 
-                                Type? objectType = TheMethod?.GetParameters()[i]?.GetType();
-                                List<object> Arrays = [];
-                                for (int s = i; s < Perms.Count; s++)
+                        if (Perms.Count > 0)
+                        {
+
+
+                            dynamic value = "";
+                            for (int i = 0; i < Perms.Count; i++)
+                            {
+                                if (Perms[i].Groups[1].Value != "Array::")
                                 {
-                                    ValueType_Get_Set(s);
-                                    if (Perms[s].Groups[5].Value == "::")
-                                    {
-                                        Arrays.Add(Convertor.GetType(Perms[s].Groups[2].Value, value));
-                                        SendPerms.Add(Convertor.ConvertToArrayType(Perms[s].Groups[2].Value, Arrays.ToArray()));
+                                    ValueType_Get_Set(i);
+                                }
+                                void ValueType_Get_Set(int where)
+                                {
 
-                                        i += Arrays.Count - 1;
-                                        Arrays = [];
-                                        break;
-                                    }
-                                    else
+                                    value = Perms[where].Groups[3].Value == "<-"
+                                        ? ValueHandler.Run($"{Perms[where].Groups[2].Value} {Perms[where].Groups[3].Value} {Perms[where].Groups[4].Value}")
+                                        : Perms[where].Groups[4].Value;
+                                }
+                                if (Perms[i].Groups[1].Value == "Array::")
+                                {
+
+                                    Type? objectType = TheMethod?.GetParameters()[i]?.GetType();
+                                    List<object> Arrays = [];
+                                    for (int s = i; s < Perms.Count; s++)
                                     {
-                                        Arrays.Add(value.GetType() == typeof(int[]) ? value : Convertor.GetType(Perms[s].Groups[2].Value, value));
+                                        ValueType_Get_Set(s);
+                                        if (Perms[s].Groups[6].Value == "::")
+                                        {
+                                            Arrays.Add(Convertor.GetType(Perms[s].Groups[2].Value, value));
+                                            SendPerms.Add(Convertor.ConvertToArrayType(Perms[s].Groups[2].Value, Arrays.ToArray()));
+
+                                            i += Arrays.Count - 1;
+                                            Arrays = [];
+                                            break;
+                                        }
+                                        else
+                                        {
+                                            Arrays.Add(value.GetType() == typeof(int[]) ? value : Convertor.GetType(Perms[s].Groups[2].Value, value));
+                                        }
                                     }
                                 }
+                                else
+                                {
+                                    SendPerms.Add(value.GetType() == typeof(int[]) ? value : Convertor.GetType(Perms[i].Groups[2].Value, value));
+                                }
                             }
-                            else
-                            {
-                                SendPerms.Add(value.GetType() == typeof(int[]) ? value : Convertor.GetType(Perms[i].Groups[2].Value, value));
-                            }
+
                         }
 
-                    }
-
-                    try
-                    {
-                        object? @return = TheMethod?.Invoke(helper, SendPerms.ToArray());
-                        if (@return != null)
+                        try
                         {
-                            if (TheMethod.ReturnType == typeof(string))
+                           object? @return = default;
+                            try
                             {
-                                ValueHandler.Run($"string lpreturn = {@return}");
+                            
+                                @return = TheMethod?.Invoke(helper, SendPerms.ToArray());
                             }
-                            else
+                            catch { }
+                            if (@return != null)
                             {
-                                ValueHandler.Run($"object lpreturn = {@return}");
+                                if (TheMethod.ReturnType == typeof(string))
+                                {
+                                    ValueHandler.Run($"string lpreturn = {@return}");
+                                }
+                                else
+                                {
+                                    ValueHandler.Run($"object lpreturn = {@return}");
+                                }
                             }
                         }
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Message : " + ex.Message);
-                        Console.WriteLine($"Source : " + ex.Source);
-                        Console.WriteLine($"StackTrace : " + ex.StackTrace);
-                        Console.WriteLine($"Data : " + ex.Data);
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Message : " + ex.Message);
+                            Console.WriteLine($"Source : " + ex.Source);
+                            Console.WriteLine($"StackTrace : " + ex.StackTrace);
+                            Console.WriteLine($"Data : " + ex.Data);
 
+                        }
+                    }
+                    else
+                    {
+                        ErrorHandler.Send(code, "Unable to Find Method");
                     }
                 }
                 else
                 {
-                    ErrorHandler.Send(code, "Unable to Find Method");
+                    ErrorHandler.Send(code, "Invalid Instruction");
                 }
-            }
-            else
-            {
-                ErrorHandler.Send(code, "Invalid Instruction");
-            }
+            
         }
         public static Type GetTypeFromInput(string input)
         {
