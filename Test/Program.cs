@@ -1,6 +1,18 @@
-﻿using Lexer;
+﻿using System;
 
-
-Lexer.Lexer.Run(@"
-int32 value1->203
-.method call Add(int32 <- value1,int32->232)");
+namespace test
+{
+    public class Program
+    {
+        static void Main(string arg)
+        {
+          
+            Lexer.Lexer.Run(@"
+ string Text = Test.txt
+.method call [System]Console.WriteLine(string<-Text)
+.method call [System]Console.ReadLine()
+.method call [System]Console.WriteLine(string<-Text)
+");
+        }
+    }
+}
