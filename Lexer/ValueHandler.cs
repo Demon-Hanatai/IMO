@@ -15,6 +15,7 @@ namespace Lexer
                     case "=":
                         SetValue(code);
                         break;
+                    
                     case "<-":
                         return GetValue(code);
 
