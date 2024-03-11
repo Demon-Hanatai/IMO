@@ -35,7 +35,8 @@ namespace Lexer
                 return;
             }
 
-            if (MemoryHandler.Memorys[name] is not Array array)
+            Array array = (Array)MemoryHandler.Memorys[name];
+            if (MemoryHandler.Memorys[name].GetType() != typeof(Array))
             {
                 ErrorHandler.Send("Type Mismatch Error", $"The identifier '{name}' is not an array.");
                 return;

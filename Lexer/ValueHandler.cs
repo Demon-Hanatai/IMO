@@ -6,16 +6,16 @@ namespace Lexer
     {
         public static dynamic Run(string code)
         {
-            Regex regex = new($@"\s{{0,}}({StringHelper.AllTypes})\s{{1,}}(\D{{1,}}\w{{0,}})*\s{{0,}}(=|<-)\s{{0,}}(.+)\s{{0,}}");
-            Match match = regex.Match(code);
+            Regex regex = new($@".*(=|<-).*");
+            Match match = regex.Match(code.Split('\n')[0]);
             if (match.Success)
             {
-                switch (match.Groups[3].Value)
+                switch (match.Groups[1].Value)
                 {
                     case "=":
                         SetValue(code);
                         break;
-                    
+
                     case "<-":
                         return GetValue(code);
 
@@ -41,6 +41,7 @@ namespace Lexer
             Match match = regex.Match(code);
             if (code.Contains("=") && code.Contains("[") && code.Contains("]"))
             {
+
                 Regex arrayRegex = new($@"\s*({StringHelper.AllTypes})\s+(\w+)\s*=\s*\s*(\[.*\])\s*\s*");
                 Match arrayMatch = arrayRegex.Match(code);
                 if (arrayMatch.Success)
@@ -53,7 +54,7 @@ namespace Lexer
                     {
                         if (MemoryHandler.Memorys.ContainsKey(elements[i]))
                         {
-                            if (elements[i].GetType() ==typeof(string) && elements[i].GetType()!=typeof(int))
+                            if (elements[i].GetType() == typeof(string) && elements[i].GetType() != typeof(int))
                             {
                                 try
                                 {
@@ -67,7 +68,7 @@ namespace Lexer
                             }
                             else
                             {
-                                elements[i] = Convertor.GetType("string",MemoryHandler.Memorys[elements[i]]);
+                                elements[i] = Convertor.GetType("string", MemoryHandler.Memorys[elements[i]]);
                             }
                         }
                     }
@@ -87,7 +88,42 @@ namespace Lexer
 
                 }
             }
+            var  NestedValue = new Regex($@"\s*({StringHelper.AllTypes})\s*(\w+\d*)\s*=\s*([\w\d\S]*)\.([\w\d\S]*)!extern");
+            var NestedValue_match = NestedValue.Match(code);
 
+            if (NestedValue_match.Success)
+            {
+                if (!MemoryHandler.Memorys.ContainsKey(NestedValue_match.Groups[2].Value.Trim().Replace(" ", null)))
+                {
+                    SetValue($"{NestedValue_match.Groups[1].Value} {NestedValue_match.Groups[2].Value} = 0 ");
+                }
+                var Value = GetValue("object <- " + NestedValue_match.Groups[3].Value.Trim());
+                if (NestedValue_match.Groups[4].Value.Trim().EndsWith("()"))
+                {
+                    string methodName = NestedValue_match.Groups[4].Value.Trim().TrimEnd('(', ')');
+                    var method = Value?.GetType().GetMethod(methodName, Type.EmptyTypes);
+
+                    if (method != null)
+                    {
+                        SetValue($"{NestedValue_match.Groups[1].Value} {NestedValue_match.Groups[2].Value} = {method.Invoke(Value, null)}");
+                        return;
+                    }
+                    else
+                    {
+                        ErrorHandler.Send(methodName, $"The method '{methodName}' does not exist in the type '{Value?.GetType().Name}'.");
+                        return;
+                    }
+                }
+                else
+                {
+                    var property = Value?.GetType().GetProperty(NestedValue_match.Groups[4].Value.Trim());
+                    if (property != null)
+                    {
+                        SetValue($"{NestedValue_match.Groups[1].Value} {NestedValue_match.Groups[2].Value} = {property.GetValue(Value, null)}");
+                        return;
+                    }
+                }
+            }
             else if (match.Success)
             {
                 if (!MemoryHandler.Memorys.ContainsKey(match.Groups[2].Value.Trim().Replace(" ", null)))
@@ -136,10 +172,10 @@ namespace Lexer
             }
 
         }
-        private static object GetValue(string code)
+        private static object? GetValue(string code)
         {
             code = code.Replace("::", null);
-            Regex regex = new($@"\s{{0,}}({StringHelper.AllTypes})\s{{0,}}<-(\D{{1,}}\w{{0,}})\s{{0,}}");
+            Regex regex = new($@"\s{{0,}}({StringHelper.AllTypes})\s*<-\s*(\D+\w*)(.*)*\s*");
             Match match = regex.Match(code);
             if (code.Contains("[") && code.Contains("]"))
             {
@@ -154,6 +190,43 @@ namespace Lexer
 
                     return Value;
 
+                }
+            }
+            var NestedValue = new Regex($@"\s*({StringHelper.AllTypes})\s*<-\s*([\w\d\S]*)\.([\w\d\S]*)");
+            var NestedValue_match = NestedValue.Match(code.Replace("!extern", " "));
+            if (NestedValue_match.Success)
+            {
+              
+                if (NestedValue_match.Success)
+                {
+                    var Value = GetValue(NestedValue_match.Groups[1].Value +" <- "+NestedValue_match.Groups[2].Value.Trim());
+                    if (NestedValue_match.Groups[3].Value.Trim().EndsWith("()"))
+                    {
+                        string methodName = NestedValue_match.Groups[3].Value.Trim().TrimEnd('(', ')');
+
+                       
+                        var method = Value?.GetType().GetMethod(methodName, Type.EmptyTypes);
+
+                      
+                        if (method != null)
+                        {
+                            return method.Invoke(Value, null);
+                            
+                        }
+                        else
+                        {
+                            ErrorHandler.Send(methodName, $"The method '{methodName}' does not exist in the type '{Value?.GetType().Name}'.");
+                        }
+                    }
+                    else
+                    {
+                        return Value?.GetType().GetProperty(NestedValue_match.Groups[3].Value.Trim())?.GetValue(Value);
+                    }
+                }
+                else
+                {
+                    
+                    ErrorHandler.Send(code, "Invalid Identifier Error.The provided code does not match the expected syntax for assignments or access operations.");
                 }
             }
             else if (match.Success)
@@ -196,6 +269,7 @@ namespace Lexer
                     ErrorHandler.Send(message: "Undefined Identifier Error", reason: $"The identifier '{match.Groups[2].Value}' has not been declared or initialized. Please ensure that '{match.Groups[2].Value}' is declared before it is used.");
                 }
             }
+           
             else
             {
                 ErrorHandler.Send(message: "Update Mismatch Error", reason: $"The update operation '{match.Groups[2].Value}' does not match expected patterns or types. Ensure the operation and value types are correct and compatible.");
