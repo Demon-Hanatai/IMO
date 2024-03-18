@@ -32,10 +32,11 @@ namespace Lexer
                 ErrorHandler.Send(message: code.Split(' ')[0], reason: "(Syntax Error)The provided code does not match the expected syntax for assignments or access operations.");
             }
 
-            return "null";
+            return null!;
         }
         private static void SetValue(string code)
         {
+            
 
             Regex regex = new($@"\s{{0,}}({StringHelper.AllTypes})\s{{1,}}(\D{{1,}}\w{{0,}})\s{{0,}}=\s{{0,}}([\w\d\D\d]{{0,}})\s{{0,}}");
             Match match = regex.Match(code);
@@ -46,12 +47,20 @@ namespace Lexer
                 Match arrayMatch = arrayRegex.Match(code);
                 if (arrayMatch.Success)
                 {
+
                     string type = arrayMatch.Groups[1].Value;
                     string identifier = arrayMatch.Groups[2].Value;
                     string value = arrayMatch.Groups[3].Value;
                     string[] elements = value.TrimStart('[').TrimEnd(']').Split(',');
                     for (int i = 0; i < elements.Length; i++)
                     {
+                        Regex _regex = new(@"""([^""""]*)""");
+                        Match _match = _regex.Match(elements[i]);
+                        if (_match.Success)
+                        {
+                            elements[i] = _match.Groups[1].Value;
+                        }
+
                         if (MemoryHandler.Memorys.ContainsKey(elements[i]))
                         {
                             if (elements[i].GetType() == typeof(string) && elements[i].GetType() != typeof(int))
@@ -63,6 +72,7 @@ namespace Lexer
                                 catch
                                 {
                                     //Meaning the value is not a pointer
+
                                     elements[i] = Convertor.GetType("string", MemoryHandler.Memorys[elements[i]]);
                                 }
                             }
@@ -72,7 +82,8 @@ namespace Lexer
                             }
                         }
                     }
-                    dynamic[] convertedElements = elements.Select(el => Convertor.GetType(type, el.Trim())).ToArray();
+
+                    dynamic[] convertedElements = elements.Select(el => Convertor.GetType(type, el)).ToArray();
 
                     MemoryHandler.Memorys[identifier] = convertedElements;
                     return;
@@ -84,42 +95,88 @@ namespace Lexer
 
 
                     object GetValue = ((object[])MemoryHandler.Memorys[arrayMatch.Groups[3].Value])[Convertor.GetType("int32", arrayMatch.Groups[4].Value)];
+                    GetValue = arrayMatch.Groups[1].Value == "string" ? "\"" + GetValue + "\"" : GetValue;
                     SetValue($"{arrayMatch.Groups[1].Value} {arrayMatch.Groups[2].Value}={GetValue}");
 
                 }
             }
-            var  NestedValue = new Regex($@"\s*({StringHelper.AllTypes})\s*(\w+\d*)\s*=\s*([\w\d\S]*)\.([\w\d\S]*)!extern");
-            var NestedValue_match = NestedValue.Match(code);
+            Regex NestedValue = new($@"\s*({StringHelper.AllTypes})\s*(\w+\d*)\s*(->|=)\s*(.*)\.(.*)!extern");
+            Match NestedValue_match = NestedValue.Match(code);
 
             if (NestedValue_match.Success)
             {
+                bool isNotADirectValue = false;
+                string ScopeCreatedValueName = "";
                 if (!MemoryHandler.Memorys.ContainsKey(NestedValue_match.Groups[2].Value.Trim().Replace(" ", null)))
                 {
                     SetValue($"{NestedValue_match.Groups[1].Value} {NestedValue_match.Groups[2].Value} = 0 ");
                 }
-                var Value = GetValue("object <- " + NestedValue_match.Groups[3].Value.Trim());
-                if (NestedValue_match.Groups[4].Value.Trim().EndsWith("()"))
+                dynamic? Value = default;
+                if (NestedValue_match.Groups[0].Value.Contains("->"))
                 {
-                    string methodName = NestedValue_match.Groups[4].Value.Trim().TrimEnd('(', ')');
-                    var method = Value?.GetType().GetMethod(methodName, Type.EmptyTypes);
+                    Regex Regex = new($"\\s*({StringHelper.AllTypes})\\s*->\\s*([\\w\\d\\S]*)");
+                    var  m = Regex.Match(NestedValue_match.Groups[4].Value.Trim());
+                    if (m.Success)
+                    {
+                        string RandomIDname()
+                        {
+                            var _ = "";
+                            for (int i = 0; i < 10; i++)
+                            {
+                                _ += "1234567890AB234823943"[new Random().Next(0, "1234567890AB234823943".Length - 1)];
+                            }
+                            return _!;
+                        }
+                        //isstring
+                        Regex _regex = new(@"""([^""""]*)""");
+                        Match _match = _regex.Match(match.Groups[3].Value);
+                        //end
+                        ScopeCreatedValueName = m.Groups[2].Value + RandomIDname();
+                        SetValue($"{m.Groups[1].Value} {ScopeCreatedValueName.Trim()} = {(_match.Success ? _match.Groups[1].Value : m.Groups[2].Value)} ");
+                        isNotADirectValue = true;
+                    }
+                    else
+                    {
+
+
+                        ErrorHandler.Send(message: "invaild tokens", NestedValue_match.Groups[4].Value.Trim());
+                    }
+
+                }
+                void RemoveKey()
+                {
+                    if (MemoryHandler.Memorys.ContainsKey(ScopeCreatedValueName))
+                    {
+                        _ = MemoryHandler.Memorys.Remove(ScopeCreatedValueName);
+                    }
+                }
+                Value = GetValue("object <- " + (isNotADirectValue ? ScopeCreatedValueName : NestedValue_match.Groups[4].Value.Trim()));
+
+                if (NestedValue_match.Groups[5].Value.Trim().EndsWith("()"))
+                {
+                    string methodName = NestedValue_match.Groups[5].Value.Trim().TrimEnd('(', ')');
+                    dynamic? method = Value?.GetType().GetMethod(methodName, Type.EmptyTypes);
 
                     if (method != null)
                     {
                         SetValue($"{NestedValue_match.Groups[1].Value} {NestedValue_match.Groups[2].Value} = {method.Invoke(Value, null)}");
+                        RemoveKey();
                         return;
                     }
                     else
                     {
                         ErrorHandler.Send(methodName, $"The method '{methodName}' does not exist in the type '{Value?.GetType().Name}'.");
+                        RemoveKey();
                         return;
                     }
                 }
                 else
                 {
-                    var property = Value?.GetType().GetProperty(NestedValue_match.Groups[4].Value.Trim());
+                    dynamic? property = Value?.GetType().GetProperty(NestedValue_match.Groups[5].Value.Trim());
                     if (property != null)
                     {
                         SetValue($"{NestedValue_match.Groups[1].Value} {NestedValue_match.Groups[2].Value} = {property.GetValue(Value, null)}");
+                        RemoveKey();
                         return;
                     }
                 }
@@ -129,18 +186,22 @@ namespace Lexer
                 if (!MemoryHandler.Memorys.ContainsKey(match.Groups[2].Value.Trim().Replace(" ", null)))
                 {
 
-                    if (MemoryHandler.Memorys.ContainsKey(match.Groups[3].Value.Trim()))
+                    if (MemoryHandler.Memorys.ContainsKey(match.Groups[2].Value.Trim()))
                     {
+                        Regex _regex = new(@"""([^""""]*)""");
+                        Match _match = _regex.Match(match.Groups[3].Value);
                         if (match.Groups[1].Value == "string")
                         {
                             try
                             {
+
                                 MemoryHandler.Memorys.Add(match.Groups[2].Value.Replace(" ", null).Trim().TrimEnd(), StringHelper.AllocString(StringHelper.GetString((IntPtr)MemoryHandler.Memorys[match.Groups[3].Value.Trim()])));
                                 return;
                             }
                             catch
                             {
-                                MemoryHandler.Memorys.Add(match.Groups[2].Value.Replace(" ", null).Trim().TrimEnd(), StringHelper.AllocString(Convert.ToString(MemoryHandler.Memorys[match.Groups[3].Value.Trim()])));
+
+                                MemoryHandler.Memorys.Add(match.Groups[2].Value.Replace(" ", null).Trim().TrimEnd(), StringHelper.AllocString(Convert.ToString(_match.Success ? _match.Groups[1].Value : MemoryHandler.Memorys[match.Groups[3].Value.Trim()])));
                                 return;
                             }
                             finally
@@ -148,13 +209,27 @@ namespace Lexer
 
                             }
                         }
-                        MemoryHandler.Memorys.Add(match.Groups[2].Value.Replace(" ", null).Trim().TrimEnd(), MemoryHandler.Memorys[match.Groups[3].Value.Trim()]);
+
+                        MemoryHandler.Memorys.Add(match.Groups[2].Value.Replace(" ", null).Trim().TrimEnd(), _match.Success ? _match.Groups[1].Value : MemoryHandler.Memorys[match.Groups[3].Value.Trim()]);
                         return;
                     }
 
                     if (match.Groups[1].Value == "string")
                     {
-                        MemoryHandler.Memorys.Add(match.Groups[2].Value.Replace(" ", null).Trim().TrimEnd(), StringHelper.AllocString(match.Groups[3].Value));
+                        Regex _regex = new(@"""([^""""]*)""");
+                        Match _match = _regex.Match(match.Groups[3].Value);
+                        if (_match.Success)
+                        {
+                            MemoryHandler.Memorys.Add(match.Groups[2].Value.Replace(" ", null).Trim().TrimEnd(), StringHelper.AllocString(_match.Groups[1].Value));
+
+                        }
+                        else
+                        {
+                            MemoryHandler.Memorys.Add(match.Groups[2].Value.Replace(" ", null).Trim().TrimEnd(), StringHelper.AllocString(match.Groups[3].Value));
+
+                        }
+
+
                     }
                     else
                     {
@@ -164,8 +239,13 @@ namespace Lexer
 
                 else
                 {
+                    Regex _regex = new(@"""([^""""]*)""");
+                    Match _match = _regex.Match(match.Groups[3].Value);
+
+
+
                     MemoryHandler.Memorys[match.Groups[2].Value.Replace(" ", null).Trim().TrimEnd()] = match.Groups[1].Value == "string"
-                        ? StringHelper.AllocString(match.Groups[3].Value)
+                        ? StringHelper.AllocString(_match.Success ? _match.Groups[3].Value : match.Groups[3].Value)
                         : (object)Convertor.GetType(match.Groups[1].Value.Replace(" ", null).Trim().TrimEnd(), match.Groups[3].Value.Replace(" ", null).Trim().TrimEnd());
                 }
 
@@ -192,26 +272,39 @@ namespace Lexer
 
                 }
             }
-            var NestedValue = new Regex($@"\s*({StringHelper.AllTypes})\s*<-\s*([\w\d\S]*)\.([\w\d\S]*)");
-            var NestedValue_match = NestedValue.Match(code.Replace("!extern", " "));
+            Regex NestedValue = new($@"\s*({StringHelper.AllTypes})\s*(->|<-)\s*([\w\d\S]*)\.([\w\d\S]*)");
+            Match NestedValue_match = NestedValue.Match(code.Replace("!extern", " "));
             if (NestedValue_match.Success)
             {
-              
+
                 if (NestedValue_match.Success)
                 {
-                    var Value = GetValue(NestedValue_match.Groups[1].Value +" <- "+NestedValue_match.Groups[2].Value.Trim());
-                    if (NestedValue_match.Groups[3].Value.Trim().EndsWith("()"))
+                    dynamic? Value = default;
+                    if (NestedValue_match.Groups[2].Value == "<-")
                     {
-                        string methodName = NestedValue_match.Groups[3].Value.Trim().TrimEnd('(', ')');
+                        Value = GetValue(NestedValue_match.Groups[1].Value + " <- " + NestedValue_match.Groups[3].Value.Trim());
+                    }
+                    else
+                    {
+                        //string start
+                        Regex _regex = new(@"""([^""""]*)""");
+                        Match _match = _regex.Match(match.Groups[3].Value);
+                        //is string end
+                        Value = Convertor.GetType(NestedValue_match.Groups[1].Value, _match.Success ? _match.Groups[1].Value : NestedValue_match.Groups[3].Value);
+                    }
 
-                       
-                        var method = Value?.GetType().GetMethod(methodName, Type.EmptyTypes);
+                    if (NestedValue_match.Groups[4].Value.Trim().EndsWith("()"))
+                    {
+                        string methodName = NestedValue_match.Groups[4].Value.Trim().TrimEnd('(', ')');
 
-                      
+
+                        dynamic? method = Value?.GetType().GetMethod(methodName, Type.EmptyTypes);
+
+
                         if (method != null)
                         {
                             return method.Invoke(Value, null);
-                            
+
                         }
                         else
                         {
@@ -220,12 +313,14 @@ namespace Lexer
                     }
                     else
                     {
-                        return Value?.GetType().GetProperty(NestedValue_match.Groups[3].Value.Trim())?.GetValue(Value);
+                        return Value?.GetType().GetProperty(NestedValue_match.Groups[4].Value.Trim())?.GetValue(Value);
                     }
+
+
                 }
                 else
                 {
-                    
+
                     ErrorHandler.Send(code, "Invalid Identifier Error.The provided code does not match the expected syntax for assignments or access operations.");
                 }
             }
@@ -269,7 +364,7 @@ namespace Lexer
                     ErrorHandler.Send(message: "Undefined Identifier Error", reason: $"The identifier '{match.Groups[2].Value}' has not been declared or initialized. Please ensure that '{match.Groups[2].Value}' is declared before it is used.");
                 }
             }
-           
+
             else
             {
                 ErrorHandler.Send(message: "Update Mismatch Error", reason: $"The update operation '{match.Groups[2].Value}' does not match expected patterns or types. Ensure the operation and value types are correct and compatible.");

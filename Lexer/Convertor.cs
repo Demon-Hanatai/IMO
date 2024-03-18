@@ -8,6 +8,12 @@ namespace Lexer
         {
             switch (value.Replace("::", null))
             {
+                case "nint":
+                    IEnumerable<nint> nint = arrays.Cast<nint>();
+                    return nint.ToArray();
+                case "IntPtr":
+                    IEnumerable<IntPtr> ptr = arrays.Cast<IntPtr>();
+                    return ptr.ToArray();
                 case "string":
                     IEnumerable<string> strs = arrays.Cast<string>();
                     return strs.ToArray();
@@ -42,8 +48,36 @@ namespace Lexer
                     return obj.ToArray();
             }
         }
+        private static object HexInt32(string value)
+        {
+            return value.Contains("0x") ? Convert.ToInt32(value, 16) : Convert.ToInt32(value);
+        }
+
+        private static object HexInt64(string value)
+        {
+            return value.Contains("0x") ? Convert.ToInt64(value, 16) : Convert.ToInt64(value);
+        }
+
+        private static object HexUInt32(string value)
+        {
+            return value.Contains("0x") ? Convert.ToUInt32(value, 16) : Convert.ToUInt32(value);
+        }
+
+        private static object HexUInt64(string value)
+        {
+            return value.Contains("0x") ? Convert.ToUInt64(value, 16) : Convert.ToUInt64(value);
+        }
+
         public static dynamic GetType(string type, dynamic value)
         {
+            if (value is string st)
+            {
+                value = st == "null" ? null! : st;
+            }
+            if (value == null)
+            {
+                return null!;
+            }
             if (((object)value).GetType() == typeof(object[]) || ((object)value).GetType() == typeof(int[]))
             {
                 return ConvertToArrayType(type, value);
@@ -71,26 +105,30 @@ namespace Lexer
             {
                 try
                 {
-                    if (value is IntPtr str)
+                    if (type == "string" && value is IntPtr str)
                     {
                         value = StringHelper.GetString(str.ToInt64());
                     }
                 }
                 catch { }
-                switch (Convert.ToString(type).ToLower())
+                switch (Convert.ToString(type))
                 {
+                    case "nint":
+                        return (nint)Convert.ToInt64(value);
+                    case "IntPtr":
+                        return value is not IntPtr ? new IntPtr(Convert.ToInt64(value)) : value;
                     case "object":
                         return value;
                     case "string":
                         return Convert.ToString(value); // No conversion needed
                     case "int32":
-                        return Convert.ToInt32(value);
+                        return HexInt32(value.ToString());
                     case "int64":
-                        return Convert.ToInt64(value);
+                        return HexInt64(value.ToString());
                     case "uint32":
-                        return Convert.ToUInt32(value);
+                        return HexUInt32(value.ToString());
                     case "uint64":
-                        return Convert.ToUInt64(value);
+                        return HexUInt64(value.ToString());
                     case "double":
                         return Convert.ToDouble(value);
                     case "bool":
@@ -119,7 +157,7 @@ namespace Lexer
             }
             catch (Exception e)
             {
-                ErrorHandler.Send(e.Message, value??"Null");
+                ErrorHandler.Send(e.Message, value ?? "Null");
             }
             return 0;
         }

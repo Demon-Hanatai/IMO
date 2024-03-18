@@ -50,7 +50,7 @@ namespace Lexer
             }
         }
 
-        public static string AllTypes = @"string|int32|int64|uint32|uint64|double|bool|byte|char|datetime|decimal|float|sbyte|short|ushort|object|int32::|string\*|int32\*|double\*";
+        public static string AllTypes = @"string|int32|int64|uint32|extern!|uint64|nint|IntPtr|double|bool|byte|char|datetime|decimal|float|sbyte|short|ushort|object|int32::|string\*|int32\*|double\*";
         public static string AllOperations = "-|\\|*|%";
 
         public static string GetString(long address)

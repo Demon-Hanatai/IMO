@@ -3,8 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-
 namespace test43
 {
     internal class Program
@@ -12,8 +10,8 @@ namespace test43
         static int Main(string[] args)
         {
 
-            Environment.SetEnvironmentVariable("DOTNET_SYSTEM_GLOBALIZATION_INVARIANT", "true");
-
+            // Environment.SetEnvironmentVariable("DOTNET_SYSTEM_GLOBALIZATION_INVARIANT", "true");
+           
             if (args.Length < 1)
             {
                 Console.WriteLine("Usage: Lexer.exe <file path>");
@@ -26,6 +24,10 @@ namespace test43
             }
             else
             {
+                for (int i = 0; i < args.Length; i++)
+                {
+
+                }
                 if (File.Exists(filePath))
                 {
                     string file = File.ReadAllText(filePath);
@@ -36,6 +38,7 @@ namespace test43
                     // File not found
                     Console.WriteLine("File not found");
                 }
+                
             }
             return 0;
         }

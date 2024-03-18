@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lexer", "Lexer\Lexer.csproj
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lex", "EJE\Lex.csproj", "{1E5D3CD4-1027-48B5-B5DE-87BB6F119642}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "testlib", "testlib\testlib.csproj", "{D0A6809E-495F-4E1E-942C-BF9ADFB32E8A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{1E5D3CD4-1027-48B5-B5DE-87BB6F119642}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1E5D3CD4-1027-48B5-B5DE-87BB6F119642}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1E5D3CD4-1027-48B5-B5DE-87BB6F119642}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D0A6809E-495F-4E1E-942C-BF9ADFB32E8A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D0A6809E-495F-4E1E-942C-BF9ADFB32E8A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D0A6809E-495F-4E1E-942C-BF9ADFB32E8A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D0A6809E-495F-4E1E-942C-BF9ADFB32E8A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

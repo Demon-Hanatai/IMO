@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Diagnostics;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace Lexer
@@ -9,6 +10,7 @@ namespace Lexer
         private static bool LoadIncludes = false;
         private static bool LoadIncludes2 = false;
         private static readonly bool IsPreprocessed = false;
+        private static bool AsGroupped = false;
         private static bool LibraryLoaded = false;
         private static readonly bool DuplicateIncludes = false;
         public static uint CurrentLine = 0;
@@ -40,13 +42,14 @@ namespace Lexer
                     {
                         From += ".sc";
                     }
+                    From = From.TrimEnd();
 
                     string fullPath = Path.IsPathRooted(From) ? From : Path.Combine(defaultFolderPath, From);
 
                     if (File.Exists(fullPath))
                     {
 
-                        Regex FindFunction = new($@"\.method\s+create\s+{MethodName}\s*\(\)\s*{{(\s*.*\s*)*}}");
+                        Regex FindFunction = new($@"\.method\s+create\s+{MethodName}\s*\(.*?\)\s*:\s*(?:Auto|\d*)\s*{{(\s*.*\s*)*}}");
                         MatchCollection matches = FindFunction.Matches(File.ReadAllText(fullPath));
                         if (matches.Count > 0)
                         {
@@ -94,12 +97,12 @@ namespace Lexer
                 {
                     From += ".sc";
                 }
-
+                From = From.TrimEnd();
                 string fullPath = Path.IsPathRooted(From) ? From : Path.Combine(defaultFolderPath, From);
 
                 if (File.Exists(fullPath))
                 {
-                    Regex FindFunction = new($@"\.method\s+create\s+{MethodName}\s*\(\)\s*{{(\s*.*\s*)*}}");
+                    Regex FindFunction = new($@"\.method\s+create\s+{MethodName}\s*\(.*?\)\s*(?:Auto|\d*)\s*{{(\s*.*\s*)*}}");
                     MatchCollection matches = FindFunction.Matches(File.ReadAllText(fullPath));
                     if (matches.Count > 0)
                     {
@@ -128,6 +131,17 @@ namespace Lexer
 
             string newCode = string.Join("\n", functions) + "\n" + code;
             return newCode;
+        }
+        private static string Groups(string code)
+        {
+            MatchCollection matches = Regex.Matches(code, @"([^;{}]+);");
+            foreach (Match match in matches)
+            {
+                string n = match.Groups[0].Value.Remove(match.Value.LastIndexOf(";"), 1).Replace("\r\n", null);
+                code = code.Replace(match.Groups[0].Value, "\n" + n);
+
+            }
+            return code;
         }
         private static string IncludeLoader2(string code, string defaultFolderPath)
         {
@@ -218,6 +232,7 @@ namespace Lexer
             return code;
         }
 
+
         public static void Run(string code, bool fromaMethodcaller = false, string Path = "")
         {
 
@@ -246,6 +261,11 @@ namespace Lexer
             //    code = PreprocessCode(code);
             //    IsPreprocessed = true;
             //}
+            if (!AsGroupped)
+            {
+                code = Groups(code);
+                AsGroupped = true;
+            }
             if (!LoadIncludes)
             {
                 code = LoadInclude(code, Path);
@@ -285,11 +305,21 @@ namespace Lexer
             }
 
 
+            pattern = @"while\s*\((.*)\s*(!=|==|<=|>=|<|>)\s*(.*)\)\s*(:\s*\d*)?\s*{\s*([\n\s\w\d\S\s]*)\s*}";
+            matches = Regex.Matches(code, pattern);
 
+            foreach (Match match in matches)
+            {
+                string methodBlock ="\n"+match.Value;
+
+                string modifiedBlock = Regex.Replace(methodBlock, "\n", "*34M#");
+                code = code.Replace(match.Value, modifiedBlock);
+               
+            }
 
             if (!fromaMethodcaller)
             {
-                pattern = @"(\.method\s+(create|overwrite)[^\{]*\{[\s\S]*?[.\n\r\s]*\})";
+                pattern = @".method\s+(create|overwrite)\s+(?:\w+\d*)\s*\([W\w\s\S\d\D]*?\).*\s*\{([\n\s\w\d\S\s]*?)\}";
                 matches = Regex.Matches(code, pattern);
 
                 foreach (Match match in matches)
@@ -302,7 +332,7 @@ namespace Lexer
                 }
             }
 
-
+          
             string removeemtryspaces = "";
             _ = code.TrimEnd().TrimStart().Split('\n');
 
@@ -328,6 +358,7 @@ namespace Lexer
             {
                 codes[i] = codes[i].TrimStart().TrimEnd();
             }
+          
 
             for (int i = 0; i < codes.Length; i++)
             {
@@ -339,7 +370,7 @@ namespace Lexer
                 }
                 string[] tokens = codes[i].Split(' ');
                 bool ISType = StringHelper.AllTypes.Contains(tokens[0].Replace(" ", null).TrimEnd());
-                if (tokens[0].StartsWith("if"))
+                if (tokens[0].StartsWith("*34M#"))//for if,elif,else conditions
                 {
                     _ = ConditionsHandler.Run(codes[i]);
                 }
@@ -368,6 +399,31 @@ namespace Lexer
 
     }
 
+    public static class Timer
+    {
+      public static Stopwatch sw = new Stopwatch();
+       public static void Start()
+        {
+            sw.Start();
+        }
+        public static long Stop()
+        {
+            sw.Stop();
+            return sw.ElapsedMilliseconds;  
+        }
+        public static void Reset()
+        {
+            sw.Reset();
+        }
+        public static void Restart()
+        {
+            sw.Restart();
+        }
+        public static void Print()
+        {
+            Console.WriteLine(sw.ElapsedMilliseconds);
+        }
+    }
     public class Helper
     {
         // Existing methods

@@ -16,7 +16,7 @@
             Console.ForegroundColor = ConsoleColor.Red;
             Console.WriteLine($"Line : {Lexer.CurrentLine}" + error + $" {reason}");
             Console.ResetColor();
-            Environment.Exit(0);
+            Environment.Exit(-8);
         }
     }
 }
