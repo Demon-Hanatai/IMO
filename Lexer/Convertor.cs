@@ -4,7 +4,7 @@ namespace Lexer
 {
     public class Convertor
     {
-        public static object ConvertToArrayType(string value, object[] arrays)
+        public static dynamic ConvertToArrayType(string value, object[] arrays)
         {
             switch (value.Replace("::", null))
             {
@@ -48,22 +48,22 @@ namespace Lexer
                     return obj.ToArray();
             }
         }
-        private static object HexInt32(string value)
+        private static dynamic HexInt32(string value)
         {
             return value.Contains("0x") ? Convert.ToInt32(value, 16) : Convert.ToInt32(value);
         }
 
-        private static object HexInt64(string value)
+        private static dynamic HexInt64(string value)
         {
             return value.Contains("0x") ? Convert.ToInt64(value, 16) : Convert.ToInt64(value);
         }
 
-        private static object HexUInt32(string value)
+        private static dynamic HexUInt32(string value)
         {
             return value.Contains("0x") ? Convert.ToUInt32(value, 16) : Convert.ToUInt32(value);
         }
 
-        private static object HexUInt64(string value)
+        private static dynamic HexUInt64(string value)
         {
             return value.Contains("0x") ? Convert.ToUInt64(value, 16) : Convert.ToUInt64(value);
         }

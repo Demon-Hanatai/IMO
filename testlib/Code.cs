@@ -4,7 +4,12 @@
     {
         public static void Print(string message)
         {
-            Console.WriteLine(message);
+            int na = 200;
+           while(na!=0)
+            {
+                na--;
+            }
+           Console.WriteLine("Done");
         }
     }
 }

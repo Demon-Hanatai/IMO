@@ -305,7 +305,7 @@ namespace Lexer
             }
 
 
-            pattern = @"while\s*\((.*)\s*(!=|==|<=|>=|<|>)\s*(.*)\)\s*(:\s*\d*)?\s*{\s*([\n\s\w\d\S\s]*)\s*}";
+            pattern = @"while\s*\((.*)\s*(!=|==|<=|>=|<|>)\s*(.*)\)\s*(:\s*\d*)?\s*{\s*([\n\s\w\d\S\s]*?)}";
             matches = Regex.Matches(code, pattern);
 
             foreach (Match match in matches)
@@ -358,7 +358,7 @@ namespace Lexer
             {
                 codes[i] = codes[i].TrimStart().TrimEnd();
             }
-          
+
 
             for (int i = 0; i < codes.Length; i++)
             {
@@ -369,7 +369,7 @@ namespace Lexer
                     continue;
                 }
                 string[] tokens = codes[i].Split(' ');
-                bool ISType = StringHelper.AllTypes.Contains(tokens[0].Replace(" ", null).TrimEnd());
+                bool ISType = (StringHelper.AllTypes + "|Add|Sub").Contains(tokens[0].Replace(" ", null).TrimEnd());
                 if (tokens[0].StartsWith("*34M#"))//for if,elif,else conditions
                 {
                     _ = ConditionsHandler.Run(codes[i]);

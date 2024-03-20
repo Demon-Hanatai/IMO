@@ -64,7 +64,7 @@ namespace Lexer
                 }
                 else if (leftopr.Contains("<-") || leftopr.Contains("!extern"))
                 {
-                    Regex regex = new($@"\s{{0,}}({StringHelper.AllTypes})\s*<-\s*(\D+\w*)\s*");
+                    Regex regex = new($@"\s*({StringHelper.AllTypes})\s*<-\s*(\D+\w*)\s*");
                     Match match = regex.Match(code);
                     if (match.Success)
                     {
@@ -131,12 +131,7 @@ namespace Lexer
 
                     if (leftopr.Contains("<-") || leftopr.Contains("!extern"))
                     {
-                        Regex regex = new($@"\s{{0,}}({StringHelper.AllTypes})\s*<-\s*(\D+\w*)\s*");
-                        Match match = regex.Match(code);
-                        if (match.Success)
-                        {
-                            FirstOptype = match.Groups[1].Value;
-                        }
+                       
                         value_[0] = leftopr;
                         GetValue = ValueHandler.Run(leftopr);
                     }
@@ -146,12 +141,7 @@ namespace Lexer
                     }
                     if (rightopr.Contains("<-") || rightopr.Contains("!extern"))
                     {
-                        Regex regex = new($@"\s{{0,}}({StringHelper.AllTypes})\s*<-\s*(\D+\w*)\s*");
-                        Match match = regex.Match(code);
-                        if (match.Success)
-                        {
-                            _ = match.Groups[1].Value;
-                        }
+                       
                         value_[1] = rightopr;
                         GetSecoValue = ValueHandler.Run(rightopr);
                     }

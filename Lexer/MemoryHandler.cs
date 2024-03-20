@@ -3,7 +3,7 @@
     public static unsafe class MemoryHandler
     {
 
-        public static Dictionary<string, object> Memorys = [];
+        public static Dictionary<string, dynamic> Memorys = [];
         private static readonly object obj = new();
         public static bool StopWatcher;
         private static List<string>? keys;

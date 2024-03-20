@@ -6,33 +6,85 @@ namespace Lexer
     {
         public static dynamic Run(string code)
         {
-            Regex regex = new($@".*(=|<-).*");
-            Match match = regex.Match(code.Split('\n')[0]);
+            Regex regex = new($@"(Add|Sub)\s+({StringHelper.AllTypes})<-\s*(\w+\d*)\s+(\w+\d*|\w*\d*|\""(.*)"")");
+            Match match  = regex.Match(code);
             if (match.Success)
             {
-                switch (match.Groups[1].Value)
+
+                Operation(code);
+            }
+
+            else
+            {
+                regex = new($@".*(=|<-).*");
+                match = regex.Match(code.Split('\n')[0]);
+                if (match.Success)
                 {
-                    case "=":
-                        SetValue(code);
-                        break;
+                    switch (match.Groups[1].Value)
+                    {
+                        case "=":
+                            SetValue(code);
+                            break;
 
-                    case "<-":
-                        return GetValue(code);
+                        case "<-":
+                            return GetValue(code);
 
 
-                    default:
-                        string identifier = code.Split(' ')[0];
-                        ErrorHandler.Send(message: $"{identifier} Error", reason: $"{identifier} is not a valid name/type in this context. Please check for typos or refer to the documentation for allowed identifiers.");
+                        default:
+                            string identifier = code.Split(' ')[0];
+                            ErrorHandler.Send(message: $"{identifier} Error", reason: $"{identifier} is not a valid name/type in this context. Please check for typos or refer to the documentation for allowed identifiers.");
 
-                        break;
+                            break;
+                    }
+                }
+
+                else
+                {
+                    ErrorHandler.Send(message: code.Split(' ')[0], reason: "(Syntax Error)The provided code does not match the expected syntax for assignments or access operations.");
+                }
+
+
+            }
+            return null!;
+
+        }
+        private static void Operation(string code)
+        {
+            Regex regex = new($@"(Add|Sub)\s+({StringHelper.AllTypes})<-\s*(\w+\d*)\s+(\w+\d*|\w*\d*|\""(.*)"")");
+            Match match = regex.Match(code);
+            if (MemoryHandler.Memorys.ContainsKey(match.Groups[3].Value.Trim()))
+            {
+                if (match.Groups[1].Value == "Add")
+                {
+                    if (match.Groups[2].Value.Trim()=="string")
+                    {
+
+                        var Value = GetValue($"{match.Groups[2].Value} <- {match.Groups[3].Value}");
+                        MemoryHandler.Memorys[match.Groups[3].Value.Trim()] =Value+ Convertor.GetType(match.Groups[2].Value, match.Groups[5].Value);
+                    }
+                    else
+                    {
+                        MemoryHandler.Memorys[match.Groups[3].Value.Trim()] += Convertor.GetType(match.Groups[2].Value, match.Groups[4].Value);
+                    }
+                 
+                }
+                if (match.Groups[1].Value == "Sub")
+                {
+                    if (match.Groups[2].Value.Trim() != "string")
+                    {
+                        var Value = GetValue($"{match.Groups[2].Value} <- {match.Groups[3].Value}");
+                        MemoryHandler.Memorys[match.Groups[3].Value.Trim()] -= Convertor.GetType(match.Groups[2].Value, match.Groups[4].Value);
+                    }
+                    else
+                    {
+                        ErrorHandler.Send(match.Groups[2].Value, "Invalid Operation Error. The operation 'Sub' is not supported for the type 'string'.");
+                    }
                 }
             }
             else
             {
-                ErrorHandler.Send(message: code.Split(' ')[0], reason: "(Syntax Error)The provided code does not match the expected syntax for assignments or access operations.");
+                ErrorHandler.Send(code, "Undefined Identifier Error.The provided code does not match the expected syntax for assignments or access operations.");
             }
-
-            return null!;
         }
         private static void SetValue(string code)
         {
