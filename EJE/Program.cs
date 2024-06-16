@@ -10,9 +10,7 @@ namespace test43
     {
         static int Main(string[] args)
         {
-            Code.Print("Hello World");
-            // Environment.SetEnvironmentVariable("DOTNET_SYSTEM_GLOBALIZATION_INVARIANT", "true");
-            args = new string[]{ "C:\\Users\\DEMON404\\respo\\Program\\Main.sc" };
+         
             if (args.Length < 1)
             {
                 Console.WriteLine("Usage: Lexer.exe <file path>");
